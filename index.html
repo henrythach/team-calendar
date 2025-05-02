@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Team Calendar</title>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    <style>
+      /* Catppuccin - Latte */
+      /* https://github.com/catppuccin/catppuccin */
+      :root {
+        --base: #eff1f5; /* base */
+        --text: #4c4f69; /* text */
+        --active-month-bg: #7287fd; /* lavender */
+        --active-month-text: #dce0e8; /* crust */
+        --past-month-bg: #9ca0b0; /* overlay0 */
+        --past-month-text: #e6e9ef; /* mantle */
+        --today-bg: #ccd0da; /* surface0 */
+        --today-text: #4c4f69; /* text */
+        --holiday-color: #fe640b; /* peach */
+      }
+
+      @media (prefers-color-scheme: dark) {
+        /* Catppuccin - Macchiato */
+        /* https://github.com/catppuccin/catppuccin */
+        :root {
+          --base: #24273a; /* base */
+          --text: #cad3f5; /* text */
+          --active-month-bg: #b7bdf8; /* lavender */
+          --active-month-text: #181926; /* crust */
+          --past-month-bg: #6e738d; /* overlay0 */
+          --past-month-text: #1e2030; /* mantle */
+          --today-bg: #363a4f; /* surface0 */
+          --today-text: #cad3f5; /* text */
+          --holiday-color: #f5a97f; /* peach */
+        }
+      }
+
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        background: var(--base);
+        color: var(--text);
+        user-select: none;
+      }
+
+      .container {
+        max-width: 1330px;
+        margin: 0 auto;
+      }
+
+      .year-title {
+        text-align: center;
+        font-size: 2em;
+        margin-bottom: 20px;
+      }
+
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+      }
+
+      .month {
+        padding: 10px;
+        scroll-margin-top: 2rem;
+      }
+
+      .month.past {
+        /*   display: none; */
+        color: var(--past-month-bg);
+      }
+
+      .month.past th,
+      .month.past td {
+        border-color: var(--past-month-bg);
+      }
+
+      .month.past th {
+        background: var(--past-month-bg);
+        color: var(--past-month-text);
+      }
+
+      .month h3 {
+        text-align: center;
+        margin: 0 0 10px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        /*border: 1px solid var(--active-month-bg);*/
+        text-align: center;
+        width: 14.28%; /* 100% / 7 days */
+        padding: 3px;
+      }
+
+      th {
+        background: var(--active-month-bg);
+        color: var(--active-month-text);
+        height: 30px;
+      }
+
+      td {
+        height: 45px;
+      }
+
+      .day {
+        position: relative;
+        font-size: 20px;
+      }
+
+      .day.today {
+        background-color: var(--today-bg);
+        color: var(--today-text);
+      }
+
+      .day.holiday::before {
+        content: "\25e4";
+        position: absolute;
+        top: 1px;
+        left: 0;
+        font-size: 24px;
+        line-height: 24px;
+        color: var(--holiday-color);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="year-title" id="year-title"></div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+      <script>
+        const EVENT_MAPPING = {
+          sp: { emoji: "🧠", text: "Sprint Planning" },
+          rf: { emoji: "🛠️", text: "Refinement" },
+          sr: { emoji: "📊", text: "Sprint Review" },
+          rt: { emoji: "🔁", text: "Retrospective" },
+          th: { emoji: "🙌", text: "Team Hangout" },
+        };
+        const DEFAULT_EVENT = { emoji: "⭐️", text: "Unknown" };
+
+        function parseEvents(queryString) {
+          const params = new URLSearchParams(queryString);
+          const rawEvents = params.get("events");
+          const eventMap = {};
+
+          if (!rawEvents) return eventMap;
+
+          rawEvents.split(",").forEach((entry) => {
+            const [dateStr, type] = entry.split(":");
+            if (!dateStr || !type) return;
+
+            // Convert YYYYMMDD to Date object
+            const year = parseInt(dateStr.slice(0, 4), 10);
+            const month = parseInt(dateStr.slice(4, 6), 10) - 1; // zero-indexed
+            const day = parseInt(dateStr.slice(6, 8), 10);
+            const date = new Date(year, month, day); // midnight local time
+
+            const key = date.getTime(); // milliseconds since epoch
+
+            if (!eventMap[key]) {
+              eventMap[key] = [];
+            }
+
+            eventMap[key].push(type.toLowerCase());
+          });
+
+          return eventMap;
+        }
+
+        function getHolidaysFromUrl(queryString) {
+          const params = new URLSearchParams(queryString);
+          const rawHolidays = params.get("holidays");
+          const holidayMap = {};
+
+          if (!rawHolidays) return holidayMap;
+
+          rawHolidays.split(",").forEach((entry) => {
+            const [dateStr, label] = entry.split(":");
+            if (!dateStr || !label) return;
+
+            const year = parseInt(dateStr.slice(0, 4), 10);
+            const month = parseInt(dateStr.slice(4, 6), 10) - 1;
+            const day = parseInt(dateStr.slice(6, 8), 10);
+            const date = new Date(year, month, day); // local time
+
+            const key = date.getTime();
+            holidayMap[key] = label;
+          });
+
+          return holidayMap;
+        }
+
+        function generateAnnualCalendar(queryString) {
+          const params = new URLSearchParams(queryString);
+          const year = params.get("year") || new Date().getFullYear();
+          document.getElementById("year-title").textContent =
+            `Calendar for ${year}`;
+          const container = document.getElementById("calendar-grid");
+          container.innerHTML = ""; // Clear previous
+          const now = new Date();
+          const today = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+          );
+
+          const monthNames = Array.from({ length: 12 }, (_, i) =>
+            new Date(year, i).toLocaleString("default", { month: "long" }),
+          );
+
+          for (let month = 0; month < 12; month++) {
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            const monthDiv = document.createElement("div");
+            monthDiv.className = "month";
+            if (now > new Date(year, month + 1, 1)) {
+              monthDiv.className += " past";
+            }
+            monthDiv.innerHTML = `<h3>${monthNames[month]}</h3>`;
+
+            const table = document.createElement("table");
+            table.innerHTML = `
+          <thead>
+            <tr>
+              <th>Su</th><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+            const tbody = table.querySelector("tbody");
+
+            let row = document.createElement("tr");
+            for (let i = 0; i < firstDay; i++) {
+              row.appendChild(document.createElement("td"));
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+              const dayTime = new Date(year, month, day).getTime();
+
+              const cell = document.createElement("td");
+              cell.className = "day";
+
+              if (dayTime === today.getTime()) {
+                cell.className += " today";
+              }
+
+              const tooltipMessages = [];
+
+              if (HOLIDAYS.hasOwnProperty(dayTime)) {
+                cell.className += " holiday";
+                tooltipMessages.push(HOLIDAYS[dayTime]);
+              }
+              if (!EVENTS.hasOwnProperty(dayTime)) {
+                const span = document.createElement("span");
+                span.className = "day-number";
+                span.textContent = day;
+                cell.appendChild(span);
+              }
+
+              if (EVENTS.hasOwnProperty(dayTime)) {
+                EVENTS[new Date(year, month, day).getTime()].forEach((item) => {
+                  const thing = EVENT_MAPPING[item] || DEFAULT_EVENT;
+                  const dot = document.createElement("span");
+                  dot.className = `dot ${item}`;
+                  dot.textContent = thing.emoji;
+                  cell.appendChild(dot);
+
+                  tooltipMessages.push(thing.text);
+                });
+              }
+
+              if (tooltipMessages.length > 0) {
+                cell.dataset.tippyContent = tooltipMessages.join(", ");
+              }
+
+              row.appendChild(cell);
+
+              if ((firstDay + day - 1) % 7 === 6) {
+                tbody.appendChild(row);
+                row = document.createElement("tr");
+              }
+            }
+
+            if (row.children.length > 0) {
+              tbody.appendChild(row);
+            }
+
+            monthDiv.appendChild(table);
+            container.appendChild(monthDiv);
+          }
+        }
+
+        const EVENTS = parseEvents(window.location.search);
+        const HOLIDAYS = getHolidaysFromUrl(window.location.search);
+        generateAnnualCalendar(window.location.search);
+
+        tippy("[data-tippy-content]");
+
+        window.addEventListener("DOMContentLoaded", () => {
+          const todayCell = document.querySelector(".today");
+          if (todayCell) {
+            const monthDiv = todayCell.closest(".month");
+            if (monthDiv) {
+              monthDiv.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }
+        });
+      </script>
+    </div>
+  </body>
+</html>
