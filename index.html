@@ -37,6 +37,32 @@
         }
       }
 
+      /* https://draculatheme.com/contribute#color-palette */
+      [data-theme="dracula"] {
+        --base: #282a36;
+        --text: #f8f8f2;
+        --active-month-bg: #6272a4;
+        --active-month-text: #f8f8f2;
+        --past-month-bg: #44475a;
+        --past-month-text: #282a36;
+        --today-bg: #44475a;
+        --today-text: #f8f8f2;
+        --holiday-color: #8be9fd;
+      }
+
+      /* https://github.com/tokyo-night/tokyo-night-vscode-theme?tab=readme-ov-file#color-palette */
+      [data-theme="tokyo-night"] {
+        --base: #1a1b26;
+        --text: #c0caf5;
+        --active-month-bg: #a9b1d6;
+        --active-month-text: #414868;
+        --past-month-bg: #44475a;
+        --past-month-text: #1a1b26;
+        --today-bg: #44475a;
+        --today-text: #bb9af7;
+        --holiday-color: #ff9e64;
+      }
+
       body {
         font-family: sans-serif;
         padding: 20px;
@@ -52,7 +78,6 @@
 
       .year-title {
         text-align: center;
-        font-size: 2em;
         margin-bottom: 20px;
       }
 
@@ -82,7 +107,7 @@
         color: var(--past-month-text);
       }
 
-      .month h3 {
+      .month .month-title {
         text-align: center;
         margin: 0 0 10px;
       }
@@ -129,11 +154,29 @@
         line-height: 24px;
         color: var(--holiday-color);
       }
+
+      .theme-selector {
+        text-align: right;
+        margin-bottom: 1rem;
+      }
+
+      select {
+        padding: 0.5rem;
+        font-size: 1rem;
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="year-title" id="year-title"></div>
+      <div class="theme-selector">
+        <label for="theme-select">Choose theme:</label>
+        <select id="theme-select">
+          <option value="">Default (Catppuccin)</option>
+          <option value="dracula">Dracula</option>
+          <option value="tokyo-night">Tokyo Night</option>
+        </select>
+      </div>
+      <h1 class="year-title"><span id="year-title"></span></h1>
       <div class="calendar-grid" id="calendar-grid"></div>
       <script>
         const EVENT_MAPPING = {
@@ -224,7 +267,7 @@
             if (now > new Date(year, month + 1, 1)) {
               monthDiv.className += " past";
             }
-            monthDiv.innerHTML = `<h3>${monthNames[month]}</h3>`;
+            monthDiv.innerHTML = `<h2 class="month-title">${monthNames[month]}</h2>`;
 
             const table = document.createElement("table");
             table.innerHTML = `
@@ -303,6 +346,30 @@
         generateAnnualCalendar(window.location.search);
 
         tippy("[data-tippy-content]");
+
+        const themeSelect = document.getElementById("theme-select");
+        const currentTheme =
+          localStorage.getItem("theme") ||
+          new URLSearchParams(window.location.search).get("theme");
+
+        function applyTheme(theme) {
+          if (theme) {
+            document.documentElement.setAttribute("data-theme", theme);
+            localStorage.setItem("theme", theme);
+            themeSelect.value = theme;
+          } else {
+            document.documentElement.removeAttribute("data-theme");
+            localStorage.removeItem("theme");
+            themeSelect.value = "";
+          }
+        }
+
+        themeSelect.addEventListener("change", (e) => {
+          const selectedTheme = e.target.value;
+          applyTheme(selectedTheme);
+        });
+
+        applyTheme(currentTheme);
 
         window.addEventListener("DOMContentLoaded", () => {
           const todayCell = document.querySelector(".today");
