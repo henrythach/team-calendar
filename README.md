@@ -2,6 +2,8 @@
 
 A lightweight, shareable web calendar that displays team scrum meetings and company holidays based on URL query parameters. Useful for embedding, linking, or sharing fixed yearly views without needing a backend or authentication.
 
+[Click here to see an example configuration for 2025.](https://henrythach.github.io/team-calendar/?year=2025&events=20250102:SP,20250114:TH,20250116:RF,20250131:SR,20250203:SP,20250213:TH,20250218:RF,20250227:SR,20250303:SP,20250314:TH,20250317:RF,20250328:SR,20250401:SP,20250414:TH,20250416:RF,20250430:SR,20250501:SP,20250514:TH,20250516:RF,20250530:SR,20250602:SP,20250613:TH,20250617:RF,20250627:SR,20250701:SP,20250714:TH,20250716:RF,20250731:SR,20250801:SP,20250814:TH,20250818:RF,20250830:SR,20250902:SP,20250913:TH,20250916:RF,20250930:SR,20251001:SP,20251014:TH,20251016:RF,20251031:SR,20251101:SP,20251113:TH,20251118:RF,20251129:SR,20251202:SP,20251213:TH,20251216:RF,20251230:SR&holidays=20250101:New+Year%27s+Day,20250120:MLK+Day,20250217:Presidents%27+Day,20250526:Memorial+Day,20250704:Independence+Day,20250901:Labor+Day,20251013:Columbus+Day,20251111:Veterans+Day,20251127:Thanksgiving,20251128:Day+After+Thanksgiving,20251225:Christmas+Day)
+
 ## 🗓 Features
 
 - View sprint events: Planning, Refinement, Retrospective, Sprint Review.
